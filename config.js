@@ -14,7 +14,7 @@
 //       resources    : coop:*
 //     That key can do nothing except play Coop, so it's fine in public code.
 
-export const ABLY_KEY = '';
+export const ABLY_KEY = 'AK3OMQ.OWsZ4g:OGQcbrXp0TH2VxxPO1KsCJAIDsAwp5mu9h_30nll5jM';
 
 // ── Option B: Supabase ──────────────────────────────────────────────────────
 // 1. supabase.com  ->  Start your project  ->  sign in with GitHub
