@@ -45,7 +45,7 @@ export default {
     let tray = null, endsAt = 0, ticker = null, over = false;
     let found = [], myScore = 0;
     let theirCount = 0, theirScore = 0;
-    const finals = new Map();       // seat -> {words, score}
+    const finals = new Map();       // player id -> {words, score}
 
     const oppName = () => ctx.players.find(p => p.id !== ctx.me.id)?.name || 'them';
 
@@ -76,10 +76,10 @@ export default {
       renderOpp();
     });
 
+    // Keyed by player id, never by seat: seat numbers are only meaningful
+    // inside one game, and a result must stay attached to the person.
     ctx.on('final', (d, msg) => {
-      const seat = ctx.players.find(p => p.id === msg.from)?.seat;
-      if (seat == null) return;
-      finals.set(seat, { words: d.words, score: d.score });
+      finals.set(msg.from, { words: d.words, score: d.score });
       if (finals.size >= 2) reveal();
     });
 
@@ -176,9 +176,10 @@ export default {
     /* ── the reveal ────────────────────────────────────────────────────── */
     function reveal() {
       if (!endPanel.hidden) return;
-      const mySeat = ctx.seat, theirSeat = 1 - mySeat;
-      const mine  = finals.get(mySeat)   || { words: found, score: myScore };
-      const their = finals.get(theirSeat) || { words: [], score: theirScore };
+      const opp = ctx.players.find(p => p.id !== ctx.me.id);
+      const mySeat = ctx.seat, theirSeat = opp?.seat ?? (1 - mySeat);
+      const mine  = finals.get(ctx.me.id) || { words: found, score: myScore };
+      const their = finals.get(opp?.id)   || { words: [], score: theirScore };
       const won = mine.score > their.score, tie = mine.score === their.score;
 
       ctx.status(tie ? 'Tie!' : won ? 'You win!' : 'You lost');
@@ -198,9 +199,9 @@ export default {
           column(oppName(), their, seatColor(theirSeat))),
         el('div.row', {},
           el('button.btn.sm', { type: 'button',
-            onclick: () => ctx.room.send('start', { id: 'anagrams', n: Date.now() }) }, 'Rematch'),
+            onclick: () => ctx.rematch() }, 'Rematch'),
           el('button.btn.ghost.sm', { type: 'button',
-            onclick: () => ctx.room.send('exit', {}) }, 'Back to room')),
+            onclick: () => ctx.exit() }, 'Back to room')),
       );
       endPanel.hidden = false;
       oppLine.textContent = '';

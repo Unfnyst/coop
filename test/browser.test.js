@@ -94,6 +94,21 @@ try {
   ok('both players show in the lobby', true);
 } catch { ok('both players show in the lobby', false, 'timed out'); }
 
+// A third person must not be able to shuffle everyone's seat numbers — that
+// bug made Anagrams show a bystander's name and an empty word list.
+console.log('');
+console.log('  -- a third person tries to join --');
+const C = await openPlayer('Dad');
+await set(C, '#codeInput', code);
+await click(C, '#joinForm button[type="submit"]');
+await wait(5000);
+ok('third player is turned away', await C.evaluate(() => !document.querySelector('#s-home').hidden));
+ok('room still shows exactly 2 players',
+   await count(A, '#playerList .player:not(.empty)') === 2,
+   'n=' + await count(A, '#playerList .player:not(.empty)'));
+await C.close();
+await wait(1500);
+
 for (let g = 0; g < GAMES.length; g++) {
   console.log(`\n  -- ${GAMES[g]} --`);
   await A.evaluate(i => document.querySelectorAll('#gameGrid .game-card')[i].click(), g);

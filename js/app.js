@@ -79,18 +79,26 @@ async function join(code) {
   chat = mountChat(room);
   chat.system(`Room ${code} — say hi 👋`);
 
-  wireRoom();
+  if (!wireRoom()) return;    // turned away (room full) — stay on the home screen
   renderGameGrid();
   show('room');
 }
 
 function wireRoom() {
+  const mine = room;                      // these handlers belong to this room
+  const stale = () => room !== mine;      // ...and must go quiet once we leave
+
   room.on('players', players => {
+    if (stale()) return;
+    if (enforceRoomCap(players)) return;  // check before touching the DOM
     renderPlayers(players);
     updateStart();
     // Host re-announces the pick so a late joiner sees the same game selected.
     if (room.isHost) room.send('pick', { id: pick });
-    if (game && players.length < 2) {
+
+    // End the game if one of the two people actually playing disappears —
+    // not merely because the headcount changed.
+    if (game && !game.roster.every(r => players.some(p => p.id === r.id))) {
       chat?.system('Your opponent left.');
       toast('Opponent left');
       backToRoom();
@@ -98,21 +106,45 @@ function wireRoom() {
   });
 
   room.on('pick', d => {
+    if (stale()) return;
     if (byId(d.id)) { pick = d.id; renderGameGrid(); }
   });
 
   room.on('start', async d => {
-    if (!byId(d.id)) return;
+    if (stale() || !byId(d.id)) return;
+    // The host says who is playing. Anyone else in the room sits this one out
+    // rather than being silently mistaken for one of the players.
+    const roster = d.roster?.length === 2 ? d.roster
+                 : room.players.slice(0, 2).map(p => ({ id: p.id, name: p.name }));
     pick = d.id; gameNonce = d.n;
-    await openGame(d.id, d.n);
+    if (!roster.some(p => p.id === me.id)) {
+      toast(`${byId(d.id).name} is in progress`);
+      return;
+    }
+    await openGame(d.id, d.n, roster);
   });
 
-  room.on('exit', () => { if (game) backToRoom(); });
+  room.on('exit', () => { if (!stale() && game) backToRoom(); });
 
   room.on('down', () => toast('Connection dropped'));
 
+  // connect() emits its first players event before we could subscribe, so the
+  // cap has to be checked once directly rather than only on later changes.
+  if (enforceRoomCap()) return false;
   renderPlayers(room.players);
   updateStart();
+  return true;
+}
+
+// A room only seats two. A third person is turned away rather than silently
+// shifting everyone's seat numbers underneath a running game.
+function enforceRoomCap(players = room.players) {
+  if (players.findIndex(p => p.id === me.id) > 1) {
+    toast('That room is full');
+    leaveRoom();
+    return true;
+  }
+  return false;
 }
 
 /* ── room screen ───────────────────────────────────────────────────────── */
@@ -161,7 +193,8 @@ function updateStart() {
 
 $('#btnStart').onclick = () => {
   if (!room.isHost || room.players.length < 2) return;
-  room.send('start', { id: pick, n: Date.now() });
+  const roster = room.players.slice(0, 2).map(p => ({ id: p.id, name: p.name }));
+  room.send('start', { id: pick, n: Date.now(), roster });
 };
 
 $('#codeCard').onclick = async () => {
@@ -178,14 +211,16 @@ $('#codeCard').onclick = async () => {
   }, 1600);
 };
 
-$('#btnLeaveRoom').onclick = () => {
+function leaveRoom() {
+  destroyGame();
   chat?.destroy(); room?.leave(); room = null; chat = null;
   history.replaceState(null, '', location.pathname);
   show('home');
-};
+}
+$('#btnLeaveRoom').onclick = leaveRoom;
 
 /* ── running a game ────────────────────────────────────────────────────── */
-async function openGame(id, nonce) {
+async function openGame(id, nonce, roster) {
   destroyGame();
   const stage = $('#gameStage');
   stage.replaceChildren(el('p.tiny', {}, 'Loading…'));
@@ -197,12 +232,18 @@ async function openGame(id, nonce) {
   stage.replaceChildren();
 
   const offs = [];
+  // Seats are frozen for the whole game. room.players changes whenever anyone
+  // joins or leaves, so deriving seats from it live meant a third person in
+  // the room — or a stale tab — could shift who counted as "the opponent".
+  const seats = roster.map((p, i) => ({ ...p, seat: i }));
+  const playing = new Set(seats.map(p => p.id));
+
   const ctx = {
     root: stage,
     room, me,
-    get seat()    { return room.seat; },
-    get isHost()  { return room.isHost; },
-    get players() { return room.players; },
+    seat: seats.findIndex(p => p.id === me.id),
+    isHost: seats[0]?.id === me.id,
+    players: seats,
     nonce,
     // Game messages are namespaced + nonce-stamped so a rematch never sees
     // stray packets from the previous round.
@@ -210,11 +251,14 @@ async function openGame(id, nonce) {
     on(type, fn) {
       const off = room.on(`g:${type}`, (d, msg) => {
         if (d && d._n !== nonce) return;
+        if (!playing.has(msg.from)) return;   // ignore anyone not in this game
         fn(d, msg);
       });
       offs.push(off);
       return off;
     },
+    rematch() { room.send('start', { id, n: Date.now(), roster }); },
+    exit()    { room.send('exit', {}); },
     status(text) {
       const bar = $('#gameStatus');
       bar.replaceChildren(text?.nodeType ? text : document.createTextNode(text ?? ''));
@@ -231,7 +275,7 @@ async function openGame(id, nonce) {
   };
 
   ctx.status(byId(id).name);
-  game = { id, offs };
+  game = { id, offs, roster };
   try {
     mod.mount(ctx);
   } catch (err) {
@@ -259,7 +303,8 @@ function backToRoom() {
 $('#btnQuit').onclick    = () => { room.send('exit', {}); };
 $('#btnBackRoom').onclick = () => { room.send('exit', {}); };
 $('#btnRematch').onclick = () => {
-  room.send('start', { id: game?.id || pick, n: Date.now() });
+  if (!game) return;
+  room.send('start', { id: game.id, n: Date.now(), roster: game.roster });
 };
 
 /* ── nice-to-haves ─────────────────────────────────────────────────────── */
