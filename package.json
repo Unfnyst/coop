@@ -6,6 +6,7 @@
   "scripts": {
     "start": "npx http-server . -p 5173 -c-1 -o",
     "test": "node test/rules.test.js && node test/net.test.js",
-    "test:live": "node test/ably.live.test.js"
+    "test:live": "node test/ably.live.test.js",
+    "test:browser": "node test/browser.test.js"
   }
 }

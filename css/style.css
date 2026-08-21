@@ -9,6 +9,11 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
+
+/* The browser hides [hidden] with display:none, but ANY author `display`
+   rule outranks it — which silently un-hides things like the game-over
+   overlay. !important keeps `hidden` meaning hidden, everywhere. */
+[hidden]{display:none !important}
 body{
   margin:0;
   background:radial-gradient(120% 80% at 50% -10%, #1e2130 0%, transparent 60%), var(--bg);
