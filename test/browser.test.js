@@ -149,6 +149,15 @@ for (let g = 0; g < GAMES.length; g++) {
   if (g === 4) {
     ok('Chess drew 64 squares', await count(A, '.ch-board > div') === 64, 'n=' + await count(A, '.ch-board > div'));
     ok('Chess set up 32 pieces', await count(A, '.ch-board .pc') === 32, 'n=' + await count(A, '.ch-board .pc'));
+    const geo = await A.evaluate(() => {
+      const r = [...document.querySelectorAll('.ch-board > div')].map(d => d.getBoundingClientRect());
+      const round = n => Math.round(n * 10) / 10;
+      return { w: [...new Set(r.map(b => round(b.width)))], h: [...new Set(r.map(b => round(b.height)))] };
+    });
+    ok('every square is the same width', geo.w.length === 1, 'widths=' + geo.w.join(','));
+    ok('every square is the same height', geo.h.length === 1, 'heights=' + geo.h.join(','));
+    ok('squares are actually square', geo.w.length === 1 && geo.h.length === 1
+       && Math.abs(geo.w[0] - geo.h[0]) <= 1, `w=${geo.w[0]} h=${geo.h[0]}`);
     // host is White; pick up the e2 pawn (index 52) and check its 2 moves show
     await A.evaluate(() => document.querySelectorAll('.ch-board > div')[52].click());
     await wait(400);

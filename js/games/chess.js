@@ -250,10 +250,17 @@ export default {
 };
 
 const CSS = `
-.ch-board{display:grid;grid-template-columns:repeat(8,1fr);width:100%;max-width:400px;
+.ch-board{display:grid;
+  /* Both axes must be explicit. With only columns declared the eight rows are
+     implicit and auto-sized, so rows holding pieces grow taller than empty
+     ones and the board stops being a grid of squares. */
+  grid-template-columns:repeat(8,1fr);
+  grid-template-rows:repeat(8,1fr);
+  width:100%;max-width:400px;
   aspect-ratio:1;border:2px solid #2e3242;border-radius:14px;overflow:hidden;
   box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .ch-board .sq{position:relative;display:grid;place-items:center;cursor:pointer;
+  min-width:0;min-height:0;   /* let 1fr win over the glyph's intrinsic size */
   transition:background .15s}
 .ch-board .light{background:#4b5270}
 .ch-board .dark{background:#2b3040}
