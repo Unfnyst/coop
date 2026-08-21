@@ -1,0 +1,10 @@
+{
+  "name": "coop",
+  "private": true,
+  "type": "module",
+  "description": "Play games with a friend using a room code.",
+  "scripts": {
+    "start": "npx http-server . -p 5173 -c-1 -o",
+    "test": "node test/rules.test.js && node test/net.test.js"
+  }
+}

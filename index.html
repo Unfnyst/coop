@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#12131a">
+<title>Coop — play games with a code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%95%8A%EF%B8%8F</text></svg>">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── HOME ─────────────────────────────────────────────────────────── -->
+  <section class="screen" id="s-home">
+    <div class="stack">
+      <header class="brand">
+        <div class="brand-mark">🕊️</div>
+        <h1>Coop</h1>
+        <p class="tag">Games with your friends. Just share a code.</p>
+      </header>
+
+      <label class="field">
+        <span>Your name</span>
+        <input id="nameInput" maxlength="12" placeholder="pick a name" autocomplete="off" spellcheck="false">
+      </label>
+
+      <button class="btn big" id="btnCreate">Create a room</button>
+
+      <div class="or"><span>or</span></div>
+
+      <form class="join" id="joinForm">
+        <input id="codeInput" maxlength="4" placeholder="CODE" autocomplete="off"
+               spellcheck="false" autocapitalize="characters" inputmode="text">
+        <button class="btn ghost" type="submit">Join</button>
+      </form>
+
+      <p class="mode-note" id="modeNote"></p>
+    </div>
+  </section>
+
+  <!-- ── ROOM ─────────────────────────────────────────────────────────── -->
+  <section class="screen" id="s-room" hidden>
+    <div class="stack wide">
+      <div class="room-head">
+        <button class="icon-btn" id="btnLeaveRoom" title="Leave">←</button>
+        <div class="code-card" id="codeCard" title="Tap to copy the invite link">
+          <span class="code-label">ROOM CODE</span>
+          <strong class="code" id="roomCode">····</strong>
+          <span class="code-hint" id="copyHint">tap to copy invite link</span>
+        </div>
+      </div>
+
+      <div class="players" id="playerList"></div>
+
+      <h2 class="section-title">Pick a game</h2>
+      <div class="game-grid" id="gameGrid"></div>
+
+      <button class="btn big" id="btnStart" disabled>Waiting for a friend…</button>
+      <p class="hint" id="roomHint"></p>
+    </div>
+  </section>
+
+  <!-- ── GAME ─────────────────────────────────────────────────────────── -->
+  <section class="screen game-screen" id="s-game" hidden>
+    <div class="game-bar">
+      <button class="icon-btn" id="btnQuit" title="Back to room">←</button>
+      <div class="status" id="gameStatus">…</div>
+      <button class="icon-btn chat-toggle" id="btnChat" title="Chat">💬<span class="badge" id="chatBadge" hidden></span></button>
+    </div>
+    <div class="game-stage" id="gameStage"></div>
+    <div class="game-over" id="gameOver" hidden>
+      <div class="go-card">
+        <div class="go-emoji" id="goEmoji">🎉</div>
+        <h2 id="goText">…</h2>
+        <div class="go-actions">
+          <button class="btn" id="btnRematch">Rematch</button>
+          <button class="btn ghost" id="btnBackRoom">Back to room</button>
+        </div>
+        <p class="hint" id="goHint"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CHAT ─────────────────────────────────────────────────────────── -->
+  <aside class="chat" id="chatPanel" hidden>
+    <div class="chat-head">
+      <strong>Room chat</strong>
+      <button class="icon-btn" id="btnChatClose">✕</button>
+    </div>
+    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-quick" id="chatQuick"></div>
+    <form class="chat-form" id="chatForm">
+      <input id="chatInput" maxlength="140" placeholder="say something…" autocomplete="off">
+      <button class="icon-btn send" type="submit">➤</button>
+    </form>
+  </aside>
+
+  <div class="toast-wrap" id="toasts"></div>
+
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
