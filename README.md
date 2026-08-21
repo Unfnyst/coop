@@ -20,7 +20,17 @@ That opens <http://localhost:5173>. To test multiplayer right now, **open a
 second tab** and join the same code — in local mode, tabs on this computer
 play each other.
 
-Run the tests any time with `npm test`.
+Run the tests any time with `npm test` — game rules and the local transport,
+no browser and no network needed.
+
+To test *real* multiplayer against Ably with two live players:
+
+```
+npm i ably
+npm run test:live
+```
+
+It skips itself if `config.js` isn't on Ably or the SDK isn't installed.
 
 ## Turn on real multiplayer
 

@@ -1,4 +1,4 @@
-import { createRoom, makeCode, makeId, IS_ONLINE } from '../js/net.js';
+import { LocalRoom, makeCode, makeId, BACKEND } from '../js/net.js';
 
 let pass = 0, fail = 0;
 const ok = (n, c, e = '') => { c ? (pass++, console.log('  ok  ' + n))
@@ -6,13 +6,14 @@ const ok = (n, c, e = '') => { c ? (pass++, console.log('  ok  ' + n))
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 console.log('\nLocalRoom (BroadcastChannel)');
-ok('config empty -> local mode', IS_ONLINE === false);
+ok('a backend is selected', ['local','ably','supabase'].includes(BACKEND), BACKEND);
+console.log('  .. config.js currently selects:', BACKEND);
 
 const code = makeCode();
 ok('room code is 4 chars', code.length === 4, code);
 ok('room code has no confusing letters', !/[ILO01]/.test(code), code);
 
-const alice = createRoom(code, { id: makeId(), name: 'Alice' });
+const alice = new LocalRoom(code, { id: makeId(), name: 'Alice' });
 await alice.connect();
 await wait(60);
 ok('alone: one player', alice.players.length === 1, JSON.stringify(alice.players));
@@ -20,7 +21,7 @@ ok('alone: I am the host', alice.isHost === true);
 ok('alone: I am seat 0', alice.seat === 0);
 
 await wait(20);
-const bob = createRoom(code, { id: makeId(), name: 'Bob' });
+const bob = new LocalRoom(code, { id: makeId(), name: 'Bob' });
 await bob.connect();
 await wait(150);
 
@@ -55,7 +56,7 @@ ok('unsubscribe actually removes the listener', true);
 /* players event fires on change */
 let events = 0;
 alice.on('players', () => events++);
-const carol = createRoom(code, { id: makeId(), name: 'Carol' });
+const carol = new LocalRoom(code, { id: makeId(), name: 'Carol' });
 await carol.connect();
 await wait(150);
 ok('a third player is noticed', events >= 1 && alice.players.length === 3, `events=${events} n=${alice.players.length}`);
@@ -74,7 +75,7 @@ ok('a silent disconnect times out', alice.players.length === 1, JSON.stringify(a
 ok('host stays the host after they leave', alice.isHost);
 
 /* rooms are isolated */
-const other = createRoom(makeCode(), { id: makeId(), name: 'Stranger' });
+const other = new LocalRoom(makeCode(), { id: makeId(), name: 'Stranger' });
 await other.connect();
 let leaked = false;
 alice.on('secret', () => { leaked = true; });

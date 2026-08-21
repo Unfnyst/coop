@@ -63,7 +63,9 @@ class BaseRoom extends Emitter {
 /* ── Real multiplayer, over Ably ───────────────────────────────────────── */
 class AblyRoom extends BaseRoom {
   async connect() {
-    const Ably = (await import('https://esm.sh/ably@2')).default;
+    // Browsers load the SDK from the CDN. test/ably.live.test.js injects the
+    // npm build via globalThis.__ABLY__ instead, since Node can't import a URL.
+    const Ably = globalThis.__ABLY__ ?? (await import('https://esm.sh/ably@2')).default;
     // echoMessages defaults to true, so — like the other two backends — you
     // also receive your own messages. Games rely on that.
     this.client = new Ably.Realtime({ key: ABLY_KEY, clientId: this.me.id });
@@ -98,7 +100,16 @@ class AblyRoom extends BaseRoom {
   }
 
   leave() {
-    try { this.ch?.presence.leave(); this.client?.close(); } catch {}
+    // presence.leave() is async and rejects if the channel already detached,
+    // so it needs a promise catch, not just a try/catch. Closing the
+    // connection clears presence anyway, so a failed leave is harmless —
+    // just don't let it escape as an unhandled rejection.
+    const close = () => { try { this.client?.close(); } catch {} };
+    try {
+      const leaving = this.ch?.presence?.leave();
+      if (leaving?.then) leaving.then(close, close);
+      else close();
+    } catch { close(); }
   }
 }
 
@@ -204,6 +215,9 @@ class LocalRoom extends BaseRoom {
     try { this.bc.postMessage({ k: 'bye', id: this.me.id }); this.bc.close(); } catch {}
   }
 }
+
+// Exported so tests can drive one backend directly, whatever config.js holds.
+export { LocalRoom, AblyRoom, SupabaseRoom };
 
 export function createRoom(code, me) {
   if (BACKEND === 'ably')     return new AblyRoom(code, me);
