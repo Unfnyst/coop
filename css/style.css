@@ -201,3 +201,39 @@ input:focus{border-color:var(--accent);background:var(--panel2)}
 .btn.sm:active{box-shadow:0 1px 0 #c9a247}
 .btn.ghost.sm{box-shadow:0 4px 0 #14161f}
 .btn.ghost.sm:active{box-shadow:0 1px 0 #14161f}
+
+/* ── turn glow ─────────────────────────────────────────────────────────── */
+/* A soft wash of whoever's turn it is, bleeding down from the top bar. */
+.game-screen{position:relative}
+.turn-glow{
+  position:absolute;left:0;right:0;top:0;height:190px;pointer-events:none;z-index:0;
+  background:linear-gradient(180deg,
+    color-mix(in srgb, var(--turn, #959cb4) 55%, transparent) 0%,
+    color-mix(in srgb, var(--turn, #959cb4) 14%, transparent) 42%,
+    transparent 100%);
+  opacity:0;transition:opacity .55s ease, background .55s ease;
+}
+.turn-glow.on{opacity:.5}
+.turn-glow.mine{opacity:.72}
+.game-bar,.game-stage{position:relative;z-index:1}
+.status .turn-name{color:var(--turn, #eef0f7)}
+
+@media (prefers-reduced-motion: reduce){
+  .turn-glow{transition:none}
+}
+
+/* ── results card ──────────────────────────────────────────────────────── */
+.go-sub{color:var(--dim);font-size:14.5px;margin:-10px 0 16px;line-height:1.45}
+.go-scores{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.go-row{
+  display:flex;align-items:center;gap:10px;background:var(--panel2);
+  border:1.5px solid var(--line);border-radius:14px;padding:10px 13px;
+  animation:pop .3s cubic-bezier(.3,1.6,.5,1) backwards;
+}
+.go-row:nth-child(2){animation-delay:.09s}
+.go-row.won{border-color:var(--accent);background:#2a2618}
+.go-row .dot{width:11px;height:11px;border-radius:50%;flex:0 0 11px}
+.go-row .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.go-row .crown{font-size:14px}
+.go-row .val{margin-left:auto;font-weight:800;font-size:19px;letter-spacing:-.02em}
+.go-row .note{margin-left:auto;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em}

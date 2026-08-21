@@ -9,6 +9,7 @@ export const GAMES = [
   { id: 'battleship', name: 'Battleship',   emoji: '🚢', blurb: 'Hide your fleet, sink theirs.' },
   { id: 'dotsboxes',  name: 'Dots & Boxes', emoji: '🟦', blurb: 'Close a box, go again.' },
   { id: 'anagrams',   name: 'Anagrams',     emoji: '🔤', blurb: '90 seconds. Most words wins.' },
+  { id: 'chess',      name: 'Chess',        emoji: '♟️', blurb: 'The real thing. Full rules.' },
 ];
 
 export const byId = id => GAMES.find(g => g.id === id);

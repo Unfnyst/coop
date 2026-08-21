@@ -1,7 +1,7 @@
 // ─── app.js ─────────────────────────────────────────────────────────────
 // Screens, rooms, and the glue that hands a connected room to a game.
 
-import { $, el, toast, sfx, confetti } from './kit.js';
+import { $, el, fill, toast, sfx, confetti, seatColor } from './kit.js';
 import { createRoom, makeCode, makeId, IS_ONLINE } from './net.js';
 import { mountChat } from './chat.js';
 import { GAMES, byId, loadGame } from './games/index.js';
@@ -150,7 +150,7 @@ function enforceRoomCap(players = room.players) {
 /* ── room screen ───────────────────────────────────────────────────────── */
 function renderPlayers(players) {
   const list = $('#playerList');
-  list.replaceChildren(
+  fill(list,
     ...players.map((p, i) => el('div.player', {},
       el('span.dot', { style: { background: ['#ff6b6b', '#4ecdc4'][i] || '#959cb4' } }),
       el('span.nm', {}, p.name),
@@ -232,6 +232,7 @@ async function openGame(id, nonce, roster) {
   stage.replaceChildren();
 
   const offs = [];
+  let lastTurn = null, finishTimer = 0;
   // Seats are frozen for the whole game. room.players changes whenever anyone
   // joins or leaves, so deriving seats from it live meant a third person in
   // the room — or a stale tab — could shift who counted as "the opponent".
@@ -259,22 +260,55 @@ async function openGame(id, nonce, roster) {
     },
     rematch() { room.send('start', { id, n: Date.now(), roster }); },
     exit()    { room.send('exit', {}); },
-    status(text) {
+    // status(text) — top bar. Pass whose turn it is and the screen picks up a
+    // soft wash of that player's colour, plus a chime when it flips to you.
+    status(text, turnSeat) {
       const bar = $('#gameStatus');
       bar.replaceChildren(text?.nodeType ? text : document.createTextNode(text ?? ''));
+      const glow = $('#turnGlow');
+      if (turnSeat == null) { glow.classList.remove('on', 'mine'); lastTurn = null; return; }
+      glow.style.setProperty('--turn', seatColor(turnSeat));
+      glow.classList.add('on');
+      glow.classList.toggle('mine', turnSeat === ctx.seat);
+      if (lastTurn !== null && lastTurn !== turnSeat) {
+        (turnSeat === ctx.seat ? sfx.mine : sfx.theirs)();
+      }
+      lastTurn = turnSeat;
     },
-    finish({ won, text, emoji }) {
-      $('#goEmoji').textContent = emoji || (won ? '🎉' : won === false ? '😵' : '🤝');
-      $('#goText').textContent = text;
-      $('#goHint').textContent = 'Either of you can start a rematch.';
-      $('#gameOver').hidden = false;
-      if (won) { sfx.win(); confetti(); } else if (won === false) sfx.lose();
+
+    // finish() — the results card. `delay` holds it back so you can actually
+    // see the winning move before the screen is covered.
+    finish({ won, text, emoji, title, winner, values, delay = 0 }) {
+      clearTimeout(finishTimer);
+      const seat = winner !== undefined ? winner
+                 : won === true ? ctx.seat
+                 : won === false ? ctx.players.find(p => p.id !== me.id)?.seat ?? null
+                 : null;
+      finishTimer = setTimeout(() => {
+        $('#goEmoji').textContent = emoji || (won ? '🎉' : won === false ? '😵' : '🤝');
+        $('#goText').textContent = title || (won ? 'You win!' : won === false ? 'You lost' : "It's a draw");
+        $('#goSub').textContent = text || '';
+        $('#goScores').replaceChildren(...ctx.players.map(p => el(
+          'div.go-row' + (seat === p.seat ? '.won' : ''), {},
+          el('span.dot', { style: { background: seatColor(p.seat) } }),
+          el('span.nm', {}, p.id === me.id ? 'You' : p.name),
+          seat === p.seat ? el('span.crown', {}, '👑') : null,
+          values && values[p.seat] != null
+            ? el('span.val', { style: { color: seatColor(p.seat) } }, String(values[p.seat]))
+            : el('span.note', {}, seat === null ? 'draw' : seat === p.seat ? 'winner' : ''),
+        )));
+        $('#goHint').textContent = 'Either of you can start a rematch.';
+        $('#gameOver').hidden = false;
+        if (won) { sfx.win(); confetti(); } else if (won === false) sfx.lose();
+        else sfx.reveal();
+      }, delay);
     },
     chat,
     onDestroy(fn) { offs.push(fn); },
   };
 
   ctx.status(byId(id).name);
+  offs.push(() => clearTimeout(finishTimer));
   game = { id, offs, roster };
   try {
     mod.mount(ctx);
@@ -289,6 +323,7 @@ function destroyGame() {
   game.offs.forEach(fn => { try { fn(); } catch {} });
   game = null;
   $('#gameStage').replaceChildren();
+  $('#turnGlow').classList.remove('on', 'mine');
 }
 
 function backToRoom() {

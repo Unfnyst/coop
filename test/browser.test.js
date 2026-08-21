@@ -40,7 +40,7 @@ Skipping browser test — nothing serving at ${BASE}. Run \`npm start\` first.`)
 
 const puppeteer = (await import(`file:///${PUP_DIR}/lib/esm/puppeteer/puppeteer-core.js`)).default;
 
-const GAMES = ['Connect 4', 'Battleship', 'Dots & Boxes', 'Anagrams'];
+const GAMES = ['Connect 4', 'Battleship', 'Dots & Boxes', 'Anagrams', 'Chess'];
 
 let pass = 0, fail = 0;
 const ok = (n, c, e = '') => { c ? (pass++, console.log('  ok   ' + n))
@@ -109,6 +109,13 @@ ok('room still shows exactly 2 players',
 await C.close();
 await wait(1500);
 
+// A bare null passed to replaceChildren becomes the text "null" on screen.
+const noNulls = async (p, sel, where) =>
+  ok(`no stray "null" text in the ${where}`,
+     !(await p.evaluate(s2 => document.querySelector(s2).innerText, sel)).includes('null'),
+     (await p.evaluate(s2 => document.querySelector(s2).innerText, sel)).slice(0, 60));
+await noNulls(A, '#s-room', 'lobby');
+
 for (let g = 0; g < GAMES.length; g++) {
   console.log(`\n  -- ${GAMES[g]} --`);
   await A.evaluate(i => document.querySelectorAll('#gameGrid .game-card')[i].click(), g);
@@ -139,6 +146,26 @@ for (let g = 0; g < GAMES.length; g++) {
   }
   if (g === 2) ok('Dots & Boxes drew 25 dots', await count(A, '.db .dot') === 25, 'n=' + await count(A, '.db .dot'));
   if (g === 3) ok('Anagrams dealt 7 letters + 2 buttons', await count(A, '.ag-tile') === 9, 'n=' + await count(A, '.ag-tile'));
+  if (g === 4) {
+    ok('Chess drew 64 squares', await count(A, '.ch-board > div') === 64, 'n=' + await count(A, '.ch-board > div'));
+    ok('Chess set up 32 pieces', await count(A, '.ch-board .pc') === 32, 'n=' + await count(A, '.ch-board .pc'));
+    // host is White; pick up the e2 pawn (index 52) and check its 2 moves show
+    await A.evaluate(() => document.querySelectorAll('.ch-board > div')[52].click());
+    await wait(400);
+    ok('selecting a pawn shows its legal moves', await count(A, '.ch-board .dot2') === 2,
+       'dots=' + await count(A, '.ch-board .dot2'));
+    // play e2-e4 (index 52 -> 36)
+    await A.evaluate(() => document.querySelectorAll('.ch-board > div')[36].click());
+    await wait(2600);
+    const moved = i => A.evaluate(n => !!document.querySelectorAll('.ch-board > div')[n].querySelector('.pc'), i);
+    ok('the pawn left e2', !(await moved(52)));
+    ok('the pawn arrived on e4', await moved(36));
+    // black's board is flipped, so e4 is child 63-36 = 27 there
+    ok('the move reached the other player',
+       await B.evaluate(() => !!document.querySelectorAll('.ch-board > div')[27].querySelector('.pc')));
+    ok('turn passed to Black', (await text(B, '#gameStatus')).startsWith('Your turn'), await text(B, '#gameStatus'));
+    ok('the turn glow is showing', await B.evaluate(() => document.querySelector('#turnGlow').classList.contains('on')));
+  }
 
   if (process.env.SHOT_DIR) {
     try {
@@ -150,6 +177,7 @@ for (let g = 0; g < GAMES.length; g++) {
       console.log('  ..   screenshot saved');
     } catch { console.log('  ..   screenshot skipped'); }
   }
+  await noNulls(A, '#gameStage', GAMES[g] + ' board');
   await click(A, '#btnQuit');
   await until(A, () => !document.querySelector('#s-room').hidden, 'host room screen');
   await until(B, () => !document.querySelector('#s-room').hidden, 'guest room screen');

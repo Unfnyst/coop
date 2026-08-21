@@ -140,16 +140,22 @@ export default {
       grid.replaceChildren(...cells);
 
       if (!isOver(state)) {
-        ctx.status(myTurn ? 'Your turn' : `${ctx.players.find(p => p.seat === state.turn)?.name || '…'}'s turn`);
+        ctx.status(myTurn ? 'Your turn' : `${ctx.players.find(p => p.seat === state.turn)?.name || '…'}'s turn`,
+                   state.turn);
       } else {
         const [a, b] = state.scores;
         const mine = state.scores[mySeat], theirs = state.scores[1 - mySeat];
-        ctx.status(a === b ? 'Draw' : mine > theirs ? 'You win!' : 'You lost');
+        const drawn = a === b;
+        ctx.status(drawn ? 'Draw' : mine > theirs ? 'You win!' : 'You lost', null);
         if (!ended) {
           ended = true;
-          ctx.finish(a === b
-            ? { won: null, text: `Dead even, ${a}–${b}`, emoji: '🤝' }
-            : { won: mine > theirs, text: `${mine}–${theirs}` });
+          ctx.finish({
+            won: drawn ? null : mine > theirs,
+            winner: drawn ? null : (a > b ? 0 : 1),
+            values: { 0: a, 1: b },
+            text: drawn ? 'Dead even.' : `${Math.max(mine, theirs)} boxes to ${Math.min(mine, theirs)}.`,
+            delay: 1700,
+          });
         }
       }
     }

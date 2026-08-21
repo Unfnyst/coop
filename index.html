@@ -67,6 +67,7 @@
 
   <!-- ── GAME ─────────────────────────────────────────────────────────── -->
   <section class="screen game-screen" id="s-game" hidden>
+    <div class="turn-glow" id="turnGlow"></div>
     <div class="game-bar">
       <button class="icon-btn" id="btnQuit" title="Back to room">←</button>
       <div class="status" id="gameStatus">…</div>
@@ -77,6 +78,8 @@
       <div class="go-card">
         <div class="go-emoji" id="goEmoji">🎉</div>
         <h2 id="goText">…</h2>
+        <p class="go-sub" id="goSub"></p>
+        <div class="go-scores" id="goScores"></div>
         <div class="go-actions">
           <button class="btn" id="btnRematch">Rematch</button>
           <button class="btn ghost" id="btnBackRoom">Back to room</button>

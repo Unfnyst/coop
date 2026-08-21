@@ -132,7 +132,15 @@ export default {
     function finish(iWon) {
       if (ended) return;
       ended = true; phase = 'done';
-      ctx.finish({ won: iWon, text: iWon ? 'Fleet destroyed!' : 'Your fleet is gone.' });
+      render();
+      // Let the last ship finish sinking before the card drops.
+      ctx.finish({
+        won: iWon,
+        winner: iWon ? mySeat() : 1 - mySeat(),
+        values: { [mySeat()]: `${myLive()}/${TOTAL_CELLS}` },
+        text: iWon ? 'Their whole fleet is on the seabed.' : 'Every one of your ships is down.',
+        delay: 2300,
+      });
     }
 
     /* ── drawing ───────────────────────────────────────────────────────── */
@@ -224,7 +232,7 @@ export default {
 
       /* status + note */
       if (phase === 'place') {
-        ctx.status(iAmReady ? `Waiting for ${oppName()}…` : 'Place your fleet');
+        ctx.status(iAmReady ? `Waiting for ${oppName()}…` : 'Place your fleet', null);
         note.textContent = iAmReady
           ? 'Locked in. Sit tight.'
           : picking !== null
@@ -232,7 +240,7 @@ export default {
             : 'Shuffle until you like it, or tap a ship on your grid to move it.';
       } else if (phase === 'play') {
         const myTurn = turn === seat;
-        ctx.status(myTurn ? 'Your turn — fire!' : `${oppName()} is aiming…`);
+        ctx.status(myTurn ? 'Your turn — fire!' : `${oppName()} is aiming…`, turn);
         note.textContent = myTurn
           ? 'Tap a square in their waters. A hit means you go again.'
           : '';

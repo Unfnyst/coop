@@ -38,6 +38,16 @@ export function toast(text, ms = 2200) {
 let ac;
 const audio = () => (ac ||= new (window.AudioContext || window.webkitAudioContext)());
 
+// Browsers start an AudioContext suspended until the user interacts. Without
+// this, the first few sounds of a session silently never play.
+function unlockAudio() {
+  try { const c = audio(); if (c.state === 'suspended') c.resume(); } catch {}
+}
+if (typeof addEventListener === 'function') {      // not in Node, where tests run
+  addEventListener('pointerdown', unlockAudio, { capture: true });
+  addEventListener('keydown', unlockAudio, { capture: true });
+}
+
 export function beep(freq = 440, ms = 90, type = 'sine', gain = 0.06) {
   if (localStorage.getItem('coop.muted') === '1') return;
   try {
@@ -58,6 +68,15 @@ export const sfx = {
           setTimeout(() => beep([523, 659, 784, 1047][i], 200, 'triangle'), d)),
   lose: () => [0, 150].forEach((d, i) =>
           setTimeout(() => beep([330, 220][i], 260, 'sine'), d)),
+
+  // your turn: a soft rising two-note chime. theirs: one quiet low note.
+  mine:  () => { beep(587, 90, 'sine', 0.05); setTimeout(() => beep(880, 150, 'sine', 0.045), 85); },
+  theirs:() => beep(392, 120, 'sine', 0.028),
+  move:  () => beep(440, 55, 'triangle', 0.05),
+  take:  () => { beep(220, 90, 'square', 0.045); setTimeout(() => beep(160, 110, 'sine', 0.04), 60); },
+  check: () => { beep(740, 110, 'square', 0.05); setTimeout(() => beep(988, 150, 'square', 0.045), 100); },
+  reveal:() => [0, 90, 180].forEach((d, i) =>
+          setTimeout(() => beep([440, 554, 659][i], 160, 'sine', 0.04), d)),
 };
 
 /* ── misc ─────────────────────────────────────────────────────────────── */
@@ -93,6 +112,14 @@ export function confetti(host, count = 40) {
     ], { duration: 1200 + Math.random() * 800, easing: 'cubic-bezier(.2,.6,.4,1)' })
      .onfinish = () => p.remove();
   }
+}
+
+/**
+ * replaceChildren(), but nullish/false entries are dropped rather than being
+ * stringified into a literal "null" text node — which is what the DOM does.
+ */
+export function fill(node, ...kids) {
+  node.replaceChildren(...kids.flat().filter(k => k != null && k !== false));
 }
 
 /** Inject a game's CSS once, so each game file can stay self-contained. */

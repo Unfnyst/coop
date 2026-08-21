@@ -97,6 +97,8 @@ export default {
         el('span.nm', {}, p.id === ctx.me.id ? 'You' : p.name),
       )));
 
+      const decided = state.winner !== null && state.winner !== 'draw';
+      board.className = 'c4' + (decided ? ' over' : '');
       board.replaceChildren(...Array.from({ length: COLS }, (_, c) => {
         const open = state.board[idx(0, c)] === -1;
         return el('div.col' + (myTurn && open ? '.playable' : ''), {
@@ -114,17 +116,27 @@ export default {
         }));
       }));
 
+      const oppName = ctx.players.find(p => p.seat !== mySeat)?.name || 'They';
+
       if (state.winner === null) {
-        ctx.status(myTurn ? 'Your turn' : `${ctx.players.find(p => p.seat === state.turn)?.name || '…'}'s turn`);
+        ctx.status(myTurn ? 'Your turn' : `${ctx.players.find(p => p.seat === state.turn)?.name || '…'}'s turn`,
+                   state.turn);
       } else if (state.winner === 'draw') {
-        ctx.status('Draw');
-        if (!ended) { ended = true; ctx.finish({ won: null, text: "It's a draw", emoji: '🤝' }); }
-      } else {
-        const won = state.winner === mySeat;
-        ctx.status(won ? 'You win!' : 'You lost');
+        ctx.status('Draw', null);
         if (!ended) {
           ended = true;
-          ctx.finish({ won, text: won ? 'Four in a row!' : 'They got four.' });
+          ctx.finish({ won: null, text: 'The board filled up.', delay: 1400 });
+        }
+      } else {
+        const won = state.winner === mySeat;
+        ctx.status(won ? 'You win!' : 'You lost', null);
+        if (!ended) {
+          ended = true;
+          // Hold the card back so the winning four highlights first.
+          ctx.finish({
+            won, winner: state.winner, delay: 2700,
+            text: won ? 'Four in a row.' : `${oppName} got four in a row.`,
+          });
         }
       }
     }
@@ -145,7 +157,10 @@ const CSS = `
   box-shadow:inset 0 3px 7px rgba(0,0,0,.65)}
 .c4 .cell.f{box-shadow:inset 0 -3px 6px rgba(0,0,0,.35),0 2px 5px rgba(0,0,0,.4)}
 .c4 .cell.new{animation:c4drop .28s cubic-bezier(.35,1.5,.5,1)}
-.c4 .cell.win{outline:3px solid #ffd166;outline-offset:-3px;animation:c4pulse .9s ease-in-out infinite}
+.c4 .cell.win{outline:3px solid #ffd166;outline-offset:-3px;animation:c4pulse .9s ease-in-out infinite;
+  box-shadow:0 0 18px rgba(255,209,102,.55)}
+.c4.over .cell.f:not(.win){opacity:.28;filter:saturate(.35)}
+.c4.over .cell{transition:opacity .5s ease, filter .5s ease}
 @keyframes c4drop{from{transform:translateY(-260%)}to{transform:none}}
 @keyframes c4pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45)}}
 `;
